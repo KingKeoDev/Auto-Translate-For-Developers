@@ -4,10 +4,8 @@ import debugpy
 import os
 import json
 from io import BytesIO
-from cache import load_cache, save_cache
-
-
-from translate import translate_json_structure, translate_word_xpath
+from flasgger import Swagger
+from controllers import register_blueprints
 
 
 app = Flask(__name__)
@@ -22,67 +20,15 @@ def health():
 
 
     
-@app.route("/translate/xpath", methods=["POST"])
-def translate_xpath():
-    data = request.get_json()
+# The translate and cache endpoints were moved into the `controllers` package to keep
+# this file small and make it easier to add more controllers in the future.
+# Initialize Swagger and register controller blueprints here.
 
-    word = data.get("word")
-    lang = data.get("lang")
+# Initialize Flasgger Swagger UI (exposed at /apidocs)
+Swagger(app)
 
-    if not word or not lang:
-        return jsonify({"error": "word and lang are required"}), 400
-
-    try:
-        translated = translate_word_xpath(word, lang)
-        return jsonify({
-            "original": word,
-            "language": lang,
-            "translated": translated
-        })
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
-
-@app.route("/translate-file", methods=["POST"])
-def translate_file():
-    if "file" not in request.files:
-        return jsonify({"error": "file is required"}), 400
-
-    file = request.files["file"]
-    target = request.form.get("target")
-    
-
-    if not target:
-        return jsonify({"error": "target language code is required"}), 400
-
-    try:
-        load_cache(target)
-        # Load JSON
-        data = json.load(file)
-
-        # Translate recursively
-        translated = translate_json_structure(data, target)
-
-        # Convert back to JSON
-        output = json.dumps(translated, ensure_ascii=False, indent=4)
-
-        save_cache()
-
-        # Prepare downloadable file
-        buffer = BytesIO()
-        buffer.write(output.encode("utf-8"))
-        buffer.seek(0)
-
-        filename = f"{target}.json"
-
-        return send_file(
-            buffer,
-            mimetype="application/json",
-            as_attachment=True,
-            download_name=filename
-        )
-
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 500
+# Register all controller blueprints
+register_blueprints(app)
 
 
 if __name__ == "__main__":

@@ -136,3 +136,38 @@ def translate_json_structure(data, lang: str):
         return translate_preserving_handlebars(data, lang)
 
     return data
+
+
+def translate_arb_structure(data, lang: str, exclude_optional: bool = True):
+    """
+    Recursively translate all string values in an ARB file structure.
+    ARB files are JSON-like, but may contain metadata keys starting with '@'.
+    By default, metadata keys (optional attributes) are excluded from translation.
+
+    Args:
+        data: The parsed ARB structure (dict/list/str).
+        lang: Target language code.
+        exclude_optional: If True, keys starting with '@' will be left untouched. If False,
+            values under '@' keys will be processed/translated like regular entries.
+    """
+    if isinstance(data, dict):
+        translated_dict = {}
+        for k, v in data.items():
+            if k.startswith("@"):
+                if exclude_optional:
+                    # When exclude_optional is True we omit metadata keys entirely from the result
+                    continue
+                # When exclude_optional is False we process/translate the metadata value normally
+                translated_dict[k] = translate_arb_structure(v, lang, exclude_optional)
+            else:
+                translated_dict[k] = translate_arb_structure(v, lang, exclude_optional)
+        return translated_dict
+
+    if isinstance(data, list):
+        return [translate_arb_structure(v, lang, exclude_optional) for v in data]
+
+    if isinstance(data, str):
+        # Preserve placeholders like {variable} in ARB
+        return translate_preserving_handlebars(data, lang)
+
+    return data
