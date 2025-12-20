@@ -1,8 +1,16 @@
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+
 import json
 import shutil
 from pathlib import Path
 from src import cache
-from src.main import app
+from flask import Flask
+from src.controllers import register_blueprints
+
+# Create local app to avoid importing src.main (which pulls optional deps like flasgger)
+app = Flask(__name__)
+register_blueprints(app)
 
 
 def setup_test_cache(tmp_path: Path):
@@ -23,7 +31,9 @@ def test_remove_keys_from_specific_languages(monkeypatch, tmp_path):
     test_dir = setup_test_cache(tmp_path)
 
     # Point cache.CACHE_DIR to our test dir
+    # Note: controllers import cache sometimes as top-level 'cache', so set both module names
     monkeypatch.setattr(cache, "CACHE_DIR", test_dir)
+    monkeypatch.setattr("cache.CACHE_DIR", test_dir)
 
     client = app.test_client()
 
@@ -46,6 +56,7 @@ def test_remove_keys_from_specific_languages(monkeypatch, tmp_path):
 def test_remove_keys_from_all_languages_when_not_specified(monkeypatch, tmp_path):
     test_dir = setup_test_cache(tmp_path)
     monkeypatch.setattr(cache, "CACHE_DIR", test_dir)
+    monkeypatch.setattr("cache.CACHE_DIR", test_dir)
 
     client = app.test_client()
 
