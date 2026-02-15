@@ -12,7 +12,8 @@ from cache import get_cached, set_cached
 
 
 SELENIUM_URL =  os.getenv("SELENIUM_URL", "http://localhost:4444/wd/hub")  
-HANDLEBAR_REGEX = re.compile(r"{{.*?}}")
+# Match either double-braced handlebars {{...}} or single-braced placeholders like {name}
+HANDLEBAR_REGEX = re.compile(r"\{\{.*?\}\}|\{[^{}]+\}")
 
 
 # Stable, reusable driver factory
